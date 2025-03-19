@@ -5,18 +5,83 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pushbullet Notificaties</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; }
-        h2 { color: #333; }
-        ul { list-style-type: none; padding: 0; }
-        li { padding: 10px; background: #f4f4f4; margin: 5px 0; border-radius: 5px; padding: 10px; }
+        body { 
+            font-family: Arial, sans-serif; 
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .widget {
+            width: 350px;
+            background: white;
+            color: black;
+            border-radius: 15px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+        }
+
+        .widget-header {
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .notification-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 10px 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .notification {
+            padding: 10px;
+            border-radius: 10px;
+            background: #ffffff;
+            margin-bottom: 10px;
+            box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease-in-out;
+        }
+
+        .notification:hover {
+            transform: scale(1.02);
+        }
+
+        .notification-title {
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .notification-body {
+            font-size: 13px;
+            margin-top: 5px;
+        }
+
+        .notification-timestamp {
+            font-size: 11px;
+            color: gray;
+            text-align: right;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
 
-    <h2>Live Notificaties</h2>
-    <ul id="notifications">
-        <li>Notificaties worden geladen...</li>
-    </ul>
+    <div class="widget">
+        <div class="widget-header">📩 Pushbullet Notificaties</div>
+        <ul id="notifications" class="notification-list">
+            <li class="notification">Notificaties worden geladen...</li>
+        </ul>
+    </div>
 
     <script>
         async function fetchNotifications() {
@@ -36,21 +101,29 @@
                 notificationList.innerHTML = ""; 
 
                 if (!data.pushes || data.pushes.length === 0) {
-                    notificationList.innerHTML = "<li>Geen meldingen beschikbaar.</li>";
+                    notificationList.innerHTML = "<li class='notification'>Geen meldingen beschikbaar.</li>";
                     return;
                 }
 
                 data.pushes.forEach(push => {
                     if (push.active && push.body) { 
                         let li = document.createElement("li");
-                        let title = push.title ? `<b>${push.title}</b>: ` : "";
-                        li.innerHTML = `${title}${push.body}`;
+                        li.classList.add("notification");
+
+                        let title = push.title ? `<div class="notification-title">${push.title}</div>` : "";
+                        let timestamp = new Date(push.created * 1000).toLocaleString();
+
+                        li.innerHTML = `
+                            ${title}
+                            <div class="notification-body">${push.body}</div>
+                            <div class="notification-timestamp">${timestamp}</div>
+                        `;
                         notificationList.appendChild(li);
                     }
                 });
             } catch (error) {
                 console.error("❌ Fout bij ophalen notificaties:", error);
-                document.getElementById("notifications").innerHTML = "<li>Fout bij laden notificaties.</li>";
+                document.getElementById("notifications").innerHTML = "<li class='notification'>Fout bij laden notificaties.</li>";
             }
         }
 
