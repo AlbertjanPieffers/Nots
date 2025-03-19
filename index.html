@@ -1,27 +1,32 @@
-async function fetchNotifications() {
-    const response = await fetch("https://api.pushbullet.com/v2/pushes", {
-        headers: { "Access-Token": "3YIP0zSfHvvoecTEj3gFXbjCOfisNrb3" }
-    });
-    const data = await response.json();
+<script>
+    async function fetchNotifications() {
+        try {
+            const response = await fetch("https://api.pushbullet.com/v2/pushes", {
+                headers: { "Access-Token": "o.3YIP0zSfHvvoecTEj3gFXbjCOfisNrb3" }
+            });
 
-    console.log("Pushbullet Data:", data);
+            const data = await response.json();
 
-    if (!data.pushes || data.pushes.length === 0) {
-        document.getElementById("notifications").innerHTML = "<p>Geen meldingen beschikbaar.</p>";
-        return;
+            const notificationList = document.getElementById("notifications");
+            notificationList.innerHTML = ""; 
+
+            if (!data.pushes || data.pushes.length === 0) {
+                notificationList.innerHTML = "<li>Geen meldingen beschikbaar.</li>";
+                return;
+            }
+
+            data.pushes.forEach(push => {
+                if (push.title && push.body && !push.dismissed) { 
+                    let li = document.createElement("li");
+                    li.textContent = `${push.title}: ${push.body}`;
+                    notificationList.appendChild(li);
+                }
+            });
+        } catch (error) {
+            console.error("Fout bij ophalen notificaties:", error);
+        }
     }
 
-    const notificationList = document.getElementById("notifications");
-    notificationList.innerHTML = ""; 
-
-    data.pushes.forEach(push => {
-        if (push.title && push.body && !push.dismissed) { // Alleen actieve meldingen tonen
-            let li = document.createElement("li");
-            li.textContent = `${push.title}: ${push.body}`;
-            notificationList.appendChild(li);
-        }
-    });
-}
-
-fetchNotifications();
-setInterval(fetchNotifications, 5000);
+    fetchNotifications();
+    setInterval(fetchNotifications, 5000);
+</script>
