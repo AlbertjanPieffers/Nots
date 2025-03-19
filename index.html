@@ -1,32 +1,39 @@
-<script>
-    async function fetchNotifications() {
-        try {
-            const response = await fetch("https://api.pushbullet.com/v2/pushes", {
-                headers: { "Access-Token": "o.3YIP0zSfHvvoecTEj3gFXbjCOfisNrb3" }
-            });
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telefoon Notificaties</title>
+</head>
+<body>
 
+    <h2>Live Notificaties</h2>
+    <ul id="notifications"></ul>
+
+    <script>
+        const API_KEY = "o.3YIP0zSfHvvoecTEj3gFXbjCOfisNrb3"; // Vervang met jouw API Key
+
+        async function fetchNotifications() {
+            const response = await fetch("https://api.pushbullet.com/v2/pushes", {
+                headers: { "Access-Token": API_KEY }
+            });
             const data = await response.json();
 
             const notificationList = document.getElementById("notifications");
             notificationList.innerHTML = ""; 
 
-            if (!data.pushes || data.pushes.length === 0) {
-                notificationList.innerHTML = "<li>Geen meldingen beschikbaar.</li>";
-                return;
-            }
-
             data.pushes.forEach(push => {
-                if (push.title && push.body && !push.dismissed) { 
+                if (push.title && push.body) {
                     let li = document.createElement("li");
                     li.textContent = `${push.title}: ${push.body}`;
                     notificationList.appendChild(li);
                 }
             });
-        } catch (error) {
-            console.error("Fout bij ophalen notificaties:", error);
         }
-    }
 
-    fetchNotifications();
-    setInterval(fetchNotifications, 5000);
-</script>
+        setInterval(fetchNotifications, 5000); // Controleer elke 5 seconden
+    </script>
+
+</body>
+</html>
+
