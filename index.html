@@ -49,12 +49,14 @@
             cursor: pointer;
             padding: 5px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
         }
 
-        .app-header:hover {
-            background: rgba(0, 0, 0, 0.05);
+        .app-header img {
+            width: 24px;
+            height: 24px;
+            margin-right: 10px;
+            border-radius: 5px;
         }
 
         .notification-list {
@@ -94,16 +96,6 @@
             text-align: right;
             margin-top: 5px;
         }
-
-        .arrow {
-            font-size: 16px;
-            transition: transform 0.3s;
-        }
-
-        .open .arrow {
-            transform: rotate(180deg);
-        }
-
     </style>
 </head>
 <body>
@@ -114,7 +106,8 @@
     </div>
 
     <script>
-        const notificationsByApp = {}; // Object om meldingen per app op te slaan
+        const notificationsByApp = {}; // Opslag voor meldingen per app
+        const iconCache = {}; // Cache om iconen niet steeds opnieuw op te halen
 
         function connectWebSocket() {
             const socket = new WebSocket("wss://stream.pushbullet.com/websocket/o.3YIP0zSfHvvoecTEj3gFXbjCOfisNrb3");
@@ -128,7 +121,7 @@
                 console.log("🔔 Nieuwe melding ontvangen:", data);
 
                 if (data.type === "push" && data.push.application_name) {
-                    addNotification(data.push.application_name, data.push.body, data.push.icon);
+                    addNotification(data.push.application_name, data.push.body);
                 }
             };
 
@@ -142,20 +135,43 @@
             };
         }
 
-        function addNotification(appName, message, iconUrl) {
+        function getAppIcon(appName) {
+            if (iconCache[appName]) {
+                return Promise.resolve(iconCache[appName]); // Gebruik de cache als de icon al is opgehaald
+            }
+
+            const cleanName = appName.toLowerCase().replace(/\s+/g, "");
+            const iconUrl = `https://logo.clearbit.com/${cleanName}.com`;
+
+            return fetch(iconUrl, { method: "HEAD" }) // Check of de icon bestaat
+                .then(response => {
+                    if (response.ok) {
+                        iconCache[appName] = iconUrl;
+                        return iconUrl;
+                    } else {
+                        return "https://cdn-icons-png.flaticon.com/512/732/732212.png"; // Generiek app-icoon
+                    }
+                })
+                .catch(() => "https://cdn-icons-png.flaticon.com/512/732/732212.png"); // Fallback als de API niet werkt
+        }
+
+        function addNotification(appName, message) {
             if (!notificationsByApp[appName]) {
-                notificationsByApp[appName] = { icon: iconUrl, notifications: [] };
+                notificationsByApp[appName] = { icon: "", notifications: [] };
             }
 
             const timestamp = new Date().toLocaleString();
             notificationsByApp[appName].notifications.unshift({ message, timestamp });
 
-            updateUI();
+            getAppIcon(appName).then(iconUrl => {
+                notificationsByApp[appName].icon = iconUrl;
+                updateUI();
+            });
         }
 
         function updateUI() {
             const container = document.getElementById("notifications-container");
-            container.innerHTML = ""; // Leeg de container
+            container.innerHTML = "";
 
             Object.keys(notificationsByApp).forEach(appName => {
                 let appSection = document.getElementById(`app-${appName}`);
@@ -166,11 +182,8 @@
                     appSection.id = `app-${appName}`;
                     appSection.innerHTML = `
                         <div class="app-header" onclick="toggleNotifications('${appName}')">
-                            <span>
-                                <img src="${notificationsByApp[appName].icon}" width="20" height="20" style="vertical-align: middle; border-radius: 5px;">
-                                ${appName}
-                            </span>
-                            <span class="arrow">▼</span>
+                            <img src="${notificationsByApp[appName].icon}" alt="${appName}">
+                            ${appName}
                         </div>
                         <ul id="list-${appName}" class="notification-list"></ul>
                     `;
@@ -183,7 +196,6 @@
                 notificationsByApp[appName].notifications.forEach(notif => {
                     let li = document.createElement("li");
                     li.classList.add("notification");
-
                     li.innerHTML = `
                         <img src="${notificationsByApp[appName].icon}" alt="${appName}">
                         <div>
@@ -198,15 +210,7 @@
 
         function toggleNotifications(appName) {
             const list = document.getElementById(`list-${appName}`);
-            const appHeader = document.querySelector(`#app-${appName} .app-header`);
-
-            if (list.style.display === "block") {
-                list.style.display = "none";
-                appHeader.classList.remove("open");
-            } else {
-                list.style.display = "block";
-                appHeader.classList.add("open");
-            }
+            list.style.display = list.style.display === "block" ? "none" : "block";
         }
 
         connectWebSocket();
