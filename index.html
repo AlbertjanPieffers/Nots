@@ -67,13 +67,22 @@
         }
 
         .notification-list {
-            list-style-type: none;
-            padding: 0;
-            margin: 5px 0;
-            max-height: 150px;
-            overflow-y: auto;
-            display: block; /* Standaard UITGEKLAPT */
-        }
+    list-style-type: none;
+    padding: 0;
+    margin: 5px 0;
+    max-height: 150px;
+    overflow-y: scroll; /* Zorgt ervoor dat de inhoud nog steeds scrollbaar is */
+    display: block;
+    
+    /* Scrollbar verbergen */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE en Edge */
+}
+
+.notification-list::-webkit-scrollbar {
+    display: none; /* Chrome, Safari */
+}
+
 
         .notification {
             display: flex;
