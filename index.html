@@ -50,6 +50,7 @@
             padding: 5px;
             display: flex;
             align-items: center;
+            justify-content: space-between;
         }
 
         .app-header img {
@@ -65,7 +66,7 @@
             margin: 5px 0;
             max-height: 150px;
             overflow-y: auto;
-            display: none;
+            display: block; /* Standaard UITGEKLAPT */
         }
 
         .notification {
@@ -96,6 +97,15 @@
             text-align: right;
             margin-top: 5px;
         }
+
+        .arrow {
+            font-size: 16px;
+            transition: transform 0.3s;
+        }
+
+        .open .arrow {
+            transform: rotate(180deg);
+        }
     </style>
 </head>
 <body>
@@ -106,8 +116,8 @@
     </div>
 
     <script>
-        const notificationsByApp = {}; // Opslag voor meldingen per app
-        const iconCache = {}; // Cache om iconen niet steeds opnieuw op te halen
+        const notificationsByApp = {}; 
+        const iconCache = {}; 
 
         function connectWebSocket() {
             const socket = new WebSocket("wss://stream.pushbullet.com/websocket/o.3YIP0zSfHvvoecTEj3gFXbjCOfisNrb3");
@@ -137,22 +147,22 @@
 
         function getAppIcon(appName) {
             if (iconCache[appName]) {
-                return Promise.resolve(iconCache[appName]); // Gebruik de cache als de icon al is opgehaald
+                return Promise.resolve(iconCache[appName]);
             }
 
             const cleanName = appName.toLowerCase().replace(/\s+/g, "");
             const iconUrl = `https://logo.clearbit.com/${cleanName}.com`;
 
-            return fetch(iconUrl, { method: "HEAD" }) // Check of de icon bestaat
+            return fetch(iconUrl, { method: "HEAD" }) 
                 .then(response => {
                     if (response.ok) {
                         iconCache[appName] = iconUrl;
                         return iconUrl;
                     } else {
-                        return "https://cdn-icons-png.flaticon.com/512/732/732212.png"; // Generiek app-icoon
+                        return "https://cdn-icons-png.flaticon.com/512/732/732212.png"; 
                     }
                 })
-                .catch(() => "https://cdn-icons-png.flaticon.com/512/732/732212.png"); // Fallback als de API niet werkt
+                .catch(() => "https://cdn-icons-png.flaticon.com/512/732/732212.png");
         }
 
         function addNotification(appName, message) {
@@ -184,6 +194,7 @@
                         <div class="app-header" onclick="toggleNotifications('${appName}')">
                             <img src="${notificationsByApp[appName].icon}" alt="${appName}">
                             ${appName}
+                            <span class="arrow">▼</span>
                         </div>
                         <ul id="list-${appName}" class="notification-list"></ul>
                     `;
@@ -205,12 +216,24 @@
                     `;
                     notificationList.appendChild(li);
                 });
+
+                // Zorg ervoor dat de notificaties standaard UITGEKLAPT zijn
+                notificationList.style.display = "block";
+                document.querySelector(`#app-${appName} .app-header`).classList.add("open");
             });
         }
 
         function toggleNotifications(appName) {
             const list = document.getElementById(`list-${appName}`);
-            list.style.display = list.style.display === "block" ? "none" : "block";
+            const appHeader = document.querySelector(`#app-${appName} .app-header`);
+
+            if (list.style.display === "block") {
+                list.style.display = "none";
+                appHeader.classList.remove("open");
+            } else {
+                list.style.display = "block";
+                appHeader.classList.add("open");
+            }
         }
 
         connectWebSocket();
