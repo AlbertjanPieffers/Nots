@@ -36,30 +36,51 @@
             border-bottom: 1px solid rgba(0, 0, 0, 0.1);
         }
 
+        .app-section {
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .app-header {
+            font-weight: bold;
+            cursor: pointer;
+            padding: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .app-header:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
         .notification-list {
             list-style-type: none;
             padding: 0;
-            margin: 10px 0;
-            max-height: 300px;
+            margin: 5px 0;
+            max-height: 150px;
             overflow-y: auto;
+            display: none;
         }
 
         .notification {
-            padding: 10px;
-            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            border-radius: 8px;
             background: rgba(255, 255, 255, 0.9);
-            margin-bottom: 10px;
-            box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
-            transition: transform 0.2s ease-in-out;
+            margin-bottom: 5px;
+            box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
         }
 
-        .notification:hover {
-            transform: scale(1.02);
-        }
-
-        .notification-title {
-            font-weight: bold;
-            font-size: 14px;
+        .notification img {
+            width: 24px;
+            height: 24px;
+            margin-right: 10px;
+            border-radius: 5px;
         }
 
         .notification-body {
@@ -73,18 +94,28 @@
             text-align: right;
             margin-top: 5px;
         }
+
+        .arrow {
+            font-size: 16px;
+            transition: transform 0.3s;
+        }
+
+        .open .arrow {
+            transform: rotate(180deg);
+        }
+
     </style>
 </head>
 <body>
 
     <div class="widget">
         <div class="widget-header">📩 Telefoonmeldingen</div>
-        <ul id="notifications" class="notification-list">
-            <li class="notification">Wachten op meldingen...</li>
-        </ul>
+        <div id="notifications-container"></div>
     </div>
 
     <script>
+        const notificationsByApp = {}; // Object om meldingen per app op te slaan
+
         function connectWebSocket() {
             const socket = new WebSocket("wss://stream.pushbullet.com/websocket/o.3YIP0zSfHvvoecTEj3gFXbjCOfisNrb3");
 
@@ -97,7 +128,7 @@
                 console.log("🔔 Nieuwe melding ontvangen:", data);
 
                 if (data.type === "push" && data.push.application_name) {
-                    addNotification(data.push.application_name, data.push.body);
+                    addNotification(data.push.application_name, data.push.body, data.push.icon);
                 }
             };
 
@@ -107,27 +138,75 @@
 
             socket.onclose = function() {
                 console.log("⚠️ WebSocket verbinding gesloten, opnieuw verbinden...");
-                setTimeout(connectWebSocket, 5000); // Herstart verbinding na 5s
+                setTimeout(connectWebSocket, 5000);
             };
         }
 
-        function addNotification(appName, message) {
-            const notificationList = document.getElementById("notifications");
+        function addNotification(appName, message, iconUrl) {
+            if (!notificationsByApp[appName]) {
+                notificationsByApp[appName] = { icon: iconUrl, notifications: [] };
+            }
 
-            let li = document.createElement("li");
-            li.classList.add("notification");
+            const timestamp = new Date().toLocaleString();
+            notificationsByApp[appName].notifications.unshift({ message, timestamp });
 
-            let title = `<div class="notification-title">${appName}</div>`;
-            let timestamp = new Date().toLocaleString();
-            let body = message ? message : "Geen tekst beschikbaar";
+            updateUI();
+        }
 
-            li.innerHTML = `
-                ${title}
-                <div class="notification-body">${body}</div>
-                <div class="notification-timestamp">${timestamp}</div>
-            `;
+        function updateUI() {
+            const container = document.getElementById("notifications-container");
+            container.innerHTML = ""; // Leeg de container
 
-            notificationList.prepend(li); // Nieuwe meldingen bovenaan tonen
+            Object.keys(notificationsByApp).forEach(appName => {
+                let appSection = document.getElementById(`app-${appName}`);
+
+                if (!appSection) {
+                    appSection = document.createElement("div");
+                    appSection.classList.add("app-section");
+                    appSection.id = `app-${appName}`;
+                    appSection.innerHTML = `
+                        <div class="app-header" onclick="toggleNotifications('${appName}')">
+                            <span>
+                                <img src="${notificationsByApp[appName].icon}" width="20" height="20" style="vertical-align: middle; border-radius: 5px;">
+                                ${appName}
+                            </span>
+                            <span class="arrow">▼</span>
+                        </div>
+                        <ul id="list-${appName}" class="notification-list"></ul>
+                    `;
+                    container.appendChild(appSection);
+                }
+
+                const notificationList = document.getElementById(`list-${appName}`);
+                notificationList.innerHTML = "";
+
+                notificationsByApp[appName].notifications.forEach(notif => {
+                    let li = document.createElement("li");
+                    li.classList.add("notification");
+
+                    li.innerHTML = `
+                        <img src="${notificationsByApp[appName].icon}" alt="${appName}">
+                        <div>
+                            <div class="notification-body">${notif.message}</div>
+                            <div class="notification-timestamp">${notif.timestamp}</div>
+                        </div>
+                    `;
+                    notificationList.appendChild(li);
+                });
+            });
+        }
+
+        function toggleNotifications(appName) {
+            const list = document.getElementById(`list-${appName}`);
+            const appHeader = document.querySelector(`#app-${appName} .app-header`);
+
+            if (list.style.display === "block") {
+                list.style.display = "none";
+                appHeader.classList.remove("open");
+            } else {
+                list.style.display = "block";
+                appHeader.classList.add("open");
+            }
         }
 
         connectWebSocket();
